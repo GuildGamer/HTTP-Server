@@ -52,24 +52,27 @@ class HTTPServer(TCPServer):
     status_codes = {
         200: "OK",
         404: "Not Found",
+        501: "Not Implemented",
     }
 
     def handle_request(self, data):
-        # The b prefix helps us convert our data to a byte string since that is how the socket library recieves and sends data
-        response_line = self.response_line(status_code=200)
+        # This created an instance of HTTPRequest and parses the request to get the attribute values
+        request = HTTPRequest(data)
 
         response_headers = self.response_headers()
 
-        blank_line = b"\r\n"
+        # This dynamically gets the function to use to handle the request based on the request method
+        try:
+            handler = getattr(self, 'handle_%s' % request.method)
+        except AttributeError:
+            # Throw an exception if the the appropriate request handler is not found
+            handler = self.HTTP_501_handler
+        response = handler(request)
 
-        response_body = b"""<html>
-            <body>
-            <h1>Request received!</h1>
-            <body>
-            </html>
-        """
+        return response
 
-        return b"".join([response_line, response_headers, blank_line, response_body])
+    def handle_GET(self, request):
+        pass
 
     def response_line(self, status_code):
         """Returns response line"""
